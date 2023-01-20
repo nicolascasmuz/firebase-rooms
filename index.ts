@@ -13,7 +13,36 @@ app.use(cors());
 const usersCollection = firestore.collection("users");
 const roomsCollection = firestore.collection("rooms");
 
-/* //post auth
+//post signup
+app.post("/signup", (req, res) => {
+  const email = req.body.email;
+  const nombre = req.body.nombre;
+
+  usersCollection
+    .where("email", "==", email)
+    .get()
+    .then((searchResponse) => {
+      if (searchResponse.empty) {
+        usersCollection
+          .add({
+            email,
+            nombre,
+          })
+          .then((newUserRef) => {
+            res.json({
+              id: newUserRef.id,
+              new: true,
+            });
+          });
+      } else {
+        res.status(400).json({
+          message: "user already exists",
+        });
+      }
+    });
+});
+
+//post auth
 app.post("/auth", (req, res) => {
   const { email } = req.body;
 
@@ -31,7 +60,7 @@ app.post("/auth", (req, res) => {
         });
       }
     });
-}); */
+});
 
 /* //post rooms
 app.post("/rooms", (req, res) => {
@@ -66,12 +95,45 @@ app.post("/rooms", (req, res) => {
     });
 }); */
 
-/* //get rooms:id
+//post rooms 2.0
+app.post("/rooms", (req, res) => {
+  const { userId } = req.body;
+
+  usersCollection
+    .doc(userId.toString())
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        const roomRef = rtdb.ref("rooms/" + nanoid());
+        roomRef
+          .set({
+            messages: [],
+            owner: userId,
+          })
+          .then(() => {
+            const fullRoomId = roomRef.key;
+            const roomId = fullRoomId.slice(16);
+            roomsCollection
+              .doc(roomId.toString())
+              .set({ rtdbRoomId: fullRoomId })
+              .then(() => {
+                res.json({ id: roomId.toString() });
+              });
+          });
+      } else {
+        res.status(401).json({
+          message: "doesn't exist",
+        });
+      }
+    });
+});
+
+//get rooms:id
 app.get("/rooms/:roomId", (req, res) => {
   const { userId } = req.query;
   const { roomId } = req.params;
 
-  userCollection
+  usersCollection
     .doc(userId.toString())
     .get()
     .then((doc) => {
@@ -89,7 +151,7 @@ app.get("/rooms/:roomId", (req, res) => {
         });
       }
     });
-}); */
+});
 
 // post rooms
 app.post("/rooms", function (req, res) {
@@ -113,15 +175,15 @@ app.post("/users", function (req, res) {
 
 // post messages
 app.post("/messages", (req, res) => {
-  const { roomId } = req.body;
+  const { rtdbRoomId } = req.body;
   const { messages } = req.body;
 
-  const roomMessagesRef = rtdb.ref("rooms/" + roomId + "/messages");
+  const roomMessagesRef = rtdb.ref("rooms/" + rtdbRoomId + "/messages");
   roomMessagesRef.push(messages);
 });
 
 // get rooms
-app.get("/rooms/:roomId", function (req, res) {
+/* app.get("/rooms/:roomId", function (req, res) {
   const existingRoom = req.params.roomId;
 
   roomsCollection
@@ -137,15 +199,19 @@ app.get("/rooms/:roomId", function (req, res) {
     .then((slicedPath) => {
       res.json(slicedPath);
     });
-});
+}); */
 
 // get messages
 app.get("/rooms/messages/:roomId", function (req, res) {
   const roomId = req.params.roomId;
 
-  const roomRef = rtdb.ref("rooms/" + roomId + "/messages");
+  /*  const roomRef = rtdb.ref("rooms/" + roomId + "/messages");
   roomRef.get().then((snap) => {
-    res.json(snap);
+    res.json(snap); */
+
+  var roomRef = rtdb.ref("rooms/" + roomId + "/messages");
+  roomRef.on("value", (snapshot) => {
+    return snapshot.val();
   });
 });
 
