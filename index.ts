@@ -60,7 +60,10 @@ app.post("/rooms", (req, res) => {
               .doc(roomId.toString())
               .set({ rtdbRoomId: fullRoomId })
               .then(() => {
-                res.json({ id: roomId.toString() });
+                res.json({
+                  id: roomId.toString(),
+                  fullId: fullRoomId.toString(),
+                });
               });
           });
       } else {
@@ -104,7 +107,8 @@ app.get("/room/:roomId", (req, res) => {
     .doc(roomId.toString())
     .get()
     .then((roomData) => {
-      res.json(roomData.data());
+      const data = roomData.data();
+      res.json(data);
     });
 });
 
@@ -112,12 +116,16 @@ app.get("/room/:roomId", (req, res) => {
 app.post("/messages", (req, res) => {
   const { rtdbRoomId } = req.body;
   const { message } = req.body;
+  const { from } = req.body;
 
-  const roomMessagesRef = rtdb.ref("rooms/" + rtdbRoomId + "/messages");
-  roomMessagesRef.push(message);
+  const roomMessagesRef = rtdb.ref(`rooms/${rtdbRoomId}/messages`);
+
+  roomMessagesRef
+    .push({ message: message, from: from })
+    .then((r) => res.json(r));
 });
 
-// get messages
+/* // get messages
 app.get("/rooms/messages/:roomId", function (req, res) {
   const roomId = req.params.roomId;
 
@@ -125,7 +133,7 @@ app.get("/rooms/messages/:roomId", function (req, res) {
   roomRef.on("value", (snapshot) => {
     return snapshot.val();
   });
-});
+}); */
 
 // SETEA EL PUERTO
 app.listen(port, () => {
