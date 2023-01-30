@@ -135,6 +135,22 @@ app.get("/rooms/messages/:roomId", function (req, res) {
   });
 }); */
 
+app.delete("/deleteroom", (req, res) => {
+  const { roomId } = req.body;
+
+  roomsCollection
+    .doc(roomId.toString())
+    .delete()
+    .then(() => {
+      res.json("Document successfully deleted!");
+      console.log("Document successfully deleted!");
+    })
+    .catch((error) => {
+      res.json("Error removing document");
+      console.error("Error removing document: ", error);
+    });
+});
+
 // SETEA EL PUERTO
 app.listen(port, () => {
   console.log(`iniciado en http://localhost:${port}`);
